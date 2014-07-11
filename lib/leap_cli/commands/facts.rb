@@ -79,11 +79,16 @@ module LeapCli; module Commands
   private
 
   def update_facts(global_options, options, args)
-    nodes = manager.filter(args)
+    nodes = manager.filter(args, :local => false)
     new_facts = {}
     ssh_connect(nodes) do |ssh|
       ssh.leap.run_with_progress(facter_cmd) do |response|
-        new_facts[response[:host]] = response[:data].strip
+        node = manager.node(response[:host])
+        if node
+          new_facts[node.name] = response[:data].strip
+        else
+          log :warning, 'Could not find node for hostname %s' % response[:host]
+        end
       end
     end
     overwrite_existing = args.empty?
